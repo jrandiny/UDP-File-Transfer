@@ -44,7 +44,8 @@ def listener(thread_quit, port):
                                                handler)).start()
                         handler.put(packet_data)
                     else:
-                        handler.put(packet_data)
+                        thread_pool_listener[source_address][data_ID].put(
+                            packet_data)
                 else:
                     if (thread_pool_sender[source_address][data_ID] != None):
                         thread_pool_sender[source_address][data_ID].put(
