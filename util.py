@@ -14,16 +14,10 @@ def generate_checksum(data_header, file_data):
     temp_packet = data_header[:]
     temp_packet += file_data
     # data_header.append(file_data)
-    checksum = b'\x00\x00'
-    # for i in range(0, len(temp_packet), 2):
-    #     #     first = temp_packet[i]
-    #     #     second = temp_packet[i + 1]#
-    #     # checksum ^= data_header[i:i + 2]
-    #     checksum = bitwise(
-    #         checksum,
-    #         "^",
-    #     )
-    return checksum
+    checksum = 0
+    for i in range(0, len(temp_packet), 2):
+        checksum ^= int.from_bytes(data_header[i:i + 2], byteorder='big')
+    return checksum.to_bytes(LENGTH_CHECKSUM, byteorder='big')
 
 
 def create_packet(file_data, id, sequence, packet_type):
@@ -48,6 +42,7 @@ def create_packet(file_data, id, sequence, packet_type):
 
 def parse_packet(packet):
     data_ID_type = packet[INDEX_TYPE_ID:INDEX_TYPE_ID + LENGTH_TYPE_ID]
+    print(data_ID_type)
     data_type = bitwise(data_ID_type, ">>", 4)
     data_ID = bitwise(data_ID_type, '&', b'\x0f')
     data_sequence = packet[INDEX_SEQUENCE:INDEX_SEQUENCE + LENGTH_SEQUENCE]
