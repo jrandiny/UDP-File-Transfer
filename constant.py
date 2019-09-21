@@ -13,6 +13,8 @@ LENGTH_CHECKSUM = 2
 
 MAX_LENGTH_DATA = 65536
 
+MAX_WAIT_ACK = 1000
+
 
 class PacketType(Enum):
     # type paket yang dikirim (8bit)
