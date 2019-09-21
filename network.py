@@ -22,6 +22,7 @@ def listener(thread_quit, port):
                                                   LENGTH_LENGTH +
                                                   LENGTH_SEQUENCE)
             print("Mendapat addr {}".format(addr))
+            print(threading.activeCount())
             packet_data = parse_packet(data)
             ''' 
                 1. Ambil type
@@ -30,7 +31,7 @@ def listener(thread_quit, port):
                 4. Jika sudah ada idnya, oper ke thread
             '''
 
-            data_type = packet_data["type"]
+            data_type = PacketType(packet_data["type"])
             if data_type != PacketType.INVALID:
                 source_address = addr[0]
                 data_ID = packet_data["id"]
@@ -38,18 +39,16 @@ def listener(thread_quit, port):
                 if data_type == PacketType.DATA or data_type == PacketType.FIN:
                     if thread_pool_listener.get(source_address) == None:
                         thread_pool_listener[source_address] = [None] * 16
+
+                    if thread_pool_listener[source_address][data_ID] == None:
+                        handler = Queue()
+                        thread_pool_listener[source_address][data_ID] = handler
+                        threading.Thread(target=receive_thread,
+                                         args=(data_ID, addr,
+                                               handler)).start()
+                        handler.put(packet_data)
                     else:
-                        if thread_pool_listener[source_address][
-                                data_ID] == None:
-                            handler = thread_pool_listener[source_address][
-                                data_ID]
-                            handler = Queue()
-                            threading.Thread(target=receive_thread,
-                                             args=(data_ID, addr,
-                                                   handler)).start()
-                            handler.put(packet_data)
-                        else:
-                            handler.put(packet_data)
+                        handler.put(packet_data)
                 else:
                     thread_pool_sender[source_address][data_ID].put(
                         packet_data)
