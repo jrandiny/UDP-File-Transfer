@@ -9,6 +9,8 @@ from math import ceil
 thread_pool_listener = dict()
 thread_pool_sender = dict()
 
+listener_lock = threading.Lock()
+
 
 def listener(thread_quit, port):
     listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -21,15 +23,8 @@ def listener(thread_quit, port):
                                                   LENGTH_CHECKSUM +
                                                   LENGTH_LENGTH +
                                                   LENGTH_SEQUENCE)
-            # print("Mendapat addr {}".format(addr))
-            # print("Active thread : {}".format(threading.activeCount()))
+
             packet_data = parse_packet(data)
-            ''' 
-                1. Ambil type
-                2. Jika valid, ambil addr dan id,
-                3. Jika id belum pernah diambil, buat thread baru
-                4. Jika sudah ada idnya, oper ke thread
-            '''
 
             data_type = PacketType(packet_data["type"])
             # print(data_type)
@@ -51,8 +46,9 @@ def listener(thread_quit, port):
                     else:
                         handler.put(packet_data)
                 else:
-                    thread_pool_sender[source_address][data_ID].put(
-                        packet_data)
+                    if (thread_pool_sender[source_address][data_ID] != None):
+                        thread_pool_sender[source_address][data_ID].put(
+                            packet_data)
 
         except socket.error:
             pass
@@ -60,41 +56,36 @@ def listener(thread_quit, port):
 
 
 def send(file, addr, port):
-    '''
-        1. Pecah file
-        2. Buat jadi packet
-        3. Buat id baru, dan thread baru
-    '''
-    # check addr di thread_pool_sender
+    # Check addr di thread_pool_sender
     if thread_pool_sender.get(addr) == None:
         # tidak ada, bikin baru
         thread_pool_sender[addr] = [None] * 16
     # thread_pool_sender[addr] ada
     thread_pool = thread_pool_sender[addr]
     # check empty thread
-    id = 0
-    while thread_pool[id] != None:
-        id += 1
-    # ada thread[id] kosong
+    thread_id = 0
+    while thread_pool[thread_id] != None:
+        thread_id += 1
+    # ada thread[thread_id] kosong
     max_number_send = ceil(len(file) / MAX_LENGTH_DATA)
     last_sequence = 0
-    thread_pool[id] = Queue()
+    thread_pool[thread_id] = Queue()
     array_packet = []
     for sequence in range(max_number_send - 1):
         start_idx = sequence * MAX_LENGTH_DATA
-        packet = create_packet(file[start_idx:start_idx + MAX_LENGTH_DATA], id,
-                               sequence, PacketType.DATA)
+        packet = create_packet(file[start_idx:start_idx + MAX_LENGTH_DATA],
+                               thread_id, sequence, PacketType.DATA)
         array_packet.append(packet)
         last_sequence = sequence + 1
 
     # kirim packet terakhir
     start_idx = last_sequence * MAX_LENGTH_DATA
-    packet = create_packet(file[start_idx:start_idx + MAX_LENGTH_DATA], id,
-                           last_sequence, PacketType.FIN)
+    packet = create_packet(file[start_idx:start_idx + MAX_LENGTH_DATA],
+                           thread_id, last_sequence, PacketType.FIN)
     array_packet.append(packet)
 
     threading.Thread(target=send_thread,
-                     args=(id, (addr, port), thread_pool[id],
+                     args=(thread_id, (addr, port), thread_pool[thread_id],
                            array_packet)).start()
 
 
@@ -134,6 +125,8 @@ def send_thread(packet_id, addr, input_queue: Queue, data):
 
 def receive_thread(addr, input_queue):
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    print()
+    print("Receiving file from {}".format(addr[0]))
     file_data = bytearray()
     iter = 0
     finished = False
@@ -162,6 +155,7 @@ def receive_thread(addr, input_queue):
 
     thread_pool_listener[addr[0]][data_id] = None
     send_socket.close()
-    with open("received_{}".format(data_id), "wb") as binary_file:
+    with open("received_{}_{}".format(addr[0], data_id), "wb") as binary_file:
         binary_file.write(file_data)
-    # print(file_data)
+
+    print("File received from {}".format(addr[0]))
