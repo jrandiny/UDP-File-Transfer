@@ -21,8 +21,8 @@ def listener(thread_quit, port):
                                                   LENGTH_CHECKSUM +
                                                   LENGTH_LENGTH +
                                                   LENGTH_SEQUENCE)
-            print("Mendapat addr {}".format(addr))
-            print(threading.activeCount())
+            # print("Mendapat addr {}".format(addr))
+            # print("Active thread : {}".format(threading.activeCount()))
             packet_data = parse_packet(data)
             ''' 
                 1. Ambil type
@@ -32,6 +32,7 @@ def listener(thread_quit, port):
             '''
 
             data_type = PacketType(packet_data["type"])
+            # print(data_type)
             if data_type != PacketType.INVALID:
                 source_address = addr[0]
                 data_ID = packet_data["id"]
@@ -44,7 +45,7 @@ def listener(thread_quit, port):
                         handler = Queue()
                         thread_pool_listener[source_address][data_ID] = handler
                         threading.Thread(target=receive_thread,
-                                         args=(data_ID, addr,
+                                         args=(data_ID, (source_address, port),
                                                handler)).start()
                         handler.put(packet_data)
                     else:
@@ -138,9 +139,9 @@ def receive_thread(id, addr, input_queue):
     finished = False
     while not finished:
         elm = input_queue.get()
-        data = elm["data"]
+        data = elm["file_data"]
         data_id = elm["id"]
-        data_type = elm["type"]
+        data_type = PacketType(elm["type"])
         data_sequence = elm["sequence"]
         # send feedback
         if data_type == PacketType.DATA:
@@ -150,13 +151,15 @@ def receive_thread(id, addr, input_queue):
             # fin
             feedback_packet = create_packet(bytearray(), data_id,
                                             data_sequence, PacketType.FIN_ACK)
+
         send_socket.sendto(feedback_packet, addr)
         # asumsi sequence urut
-        file_data.append(data)
+        file_data += data
         if data_type == PacketType.FIN:
             # data berakhir
             finished = True
         input_queue.task_done()
 
-    thread_pool_sender[addr[0]][id] = None
+    thread_pool_listener[addr[0]][id] = None
     send_socket.close()
+    print(file_data)
