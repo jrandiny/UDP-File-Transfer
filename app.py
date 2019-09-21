@@ -14,8 +14,12 @@ if __name__ == "__main__":
         input_list = user_input.split(" ")
 
         if (input_list[0] == "send"):
-            with open(input_list[1], "rb") as binary_file:
-                send(binary_file.read(), input_list[2], port)
+            try:
+                with open(input_list[1], "rb") as binary_file:
+                    send(binary_file.read(), input_list[2], port)
+            except FileNotFoundError:
+                print("File not found")
+
         elif (input_list[0] == "help"):
             print("Avaiable command : ")
             print("-------------------")
