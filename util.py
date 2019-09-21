@@ -12,10 +12,9 @@ from constant import *
 
 def generate_checksum(data_header, file_data):
     temp_packet = data_header[:]
-    for bit in file_data:
-        temp_packet.append(bit)
+    temp_packet += file_data
     # data_header.append(file_data)
-    checksum = 0
+    checksum = b'\x00\x00'
     # for i in range(0, len(temp_packet), 2):
     #     #     first = temp_packet[i]
     #     #     second = temp_packet[i + 1]#
@@ -24,7 +23,6 @@ def generate_checksum(data_header, file_data):
     #         checksum,
     #         "^",
     #     )
-
     return checksum
 
 
@@ -33,13 +31,17 @@ def create_packet(file_data, id, sequence, packet_type):
 
     type_id = packet_type.value << 4 | id
     packet.append(type_id)
-    packet.append(sequence)
-    packet.append(len(file_data))
+    packet += sequence.to_bytes(LENGTH_LENGTH, byteorder='big')
+    packet += (len(file_data)).to_bytes(LENGTH_LENGTH, byteorder='big')
 
     checksum = generate_checksum(packet, file_data)
-    packet.append(checksum)
-    for data in file_data:
-        packet.append(data)
+    packet += checksum  # # print(str(packet))
+
+    packet += file_data
+    # for data in checksum:
+    #     packet.append(data)
+    # for data in file_data:
+    #     packet.append(data)
 
     return packet
 
