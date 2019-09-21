@@ -85,10 +85,9 @@ def send(file, addr, port):
         packet = create_packet(file[start_idx:start_idx + MAX_LENGTH_DATA], id,
                                sequence, PacketType.DATA)
         array_packet.append(packet)
-        last_sequence = sequence
+        last_sequence = sequence + 1
 
     # kirim packet terakhir
-    last_sequence += 1
     start_idx = last_sequence * MAX_LENGTH_DATA
     packet = create_packet(file[start_idx:start_idx + MAX_LENGTH_DATA], id,
                            last_sequence, PacketType.FIN)
