@@ -131,7 +131,6 @@ def send(file, ip_address, port, size):
                            last_sequence, PacketType.FIN)
     packet_queue.put(packet)
     packet_queue.join()
-    print("File sent to {}\n> ".format(ip_address), end="")
 
 
 def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
@@ -149,11 +148,8 @@ def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
         packet_count (int) : Berisi jumlah paket untuk deteksi kapan fin
     '''
     global current_progress
-
-    print("\nFile sent to {}\n> ".format(addr), end="")
-    file_count -= 1
-    if file_count==0:
-        current_progress=total_progress=0
+    global file_count
+    global total_progress
 
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -203,6 +199,10 @@ def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
 
     thread_pool_sender[addr[0]][packet_id] = None
     send_socket.close()
+    file_count -= 1
+    print("\nFile sent to {}\n> ".format(addr), end="")
+    if file_count==0:
+        current_progress=total_progress=0
 
 
 def receive_thread(addr, input_queue):
