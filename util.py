@@ -13,11 +13,10 @@ from constant import *
 def generate_checksum(data_header, file_data):
     temp_packet = data_header[:]
     temp_packet += file_data
-    # data_header.append(file_data)
     checksum = 0
     for i in range(0, len(temp_packet), 2):
-        checksum ^= int.from_bytes(data_header[i:i + 2], byteorder='big')
-    return checksum.to_bytes(LENGTH_CHECKSUM, byteorder='big')
+        checksum ^= int.from_bytes(data_header[i:i + 2], byteorder=BYTE_ORDER)
+    return checksum.to_bytes(LENGTH_CHECKSUM, byteorder=BYTE_ORDER)
 
 
 def create_packet(file_data, id, sequence, packet_type):
@@ -25,29 +24,33 @@ def create_packet(file_data, id, sequence, packet_type):
 
     type_id = packet_type.value << 4 | id
     packet.append(type_id)
-    packet += sequence.to_bytes(LENGTH_LENGTH, byteorder='big')
-    packet += (len(file_data)).to_bytes(LENGTH_LENGTH, byteorder='big')
+    packet += sequence.to_bytes(LENGTH_LENGTH, byteorder=BYTE_ORDER)
+    packet += (len(file_data)).to_bytes(LENGTH_LENGTH, byteorder=BYTE_ORDER)
 
     checksum = generate_checksum(packet, file_data)
-    packet += checksum  # # print(str(packet))
+    packet += checksum
 
     packet += file_data
-    # for data in checksum:
-    #     packet.append(data)
-    # for data in file_data:
-    #     packet.append(data)
 
     return packet
 
 
+def to_int(byte):
+    return int.from_bytes(byte, byteorder=BYTE_ORDER)
+
+
 def parse_packet(packet):
     data_ID_type = packet[INDEX_TYPE_ID:INDEX_TYPE_ID + LENGTH_TYPE_ID]
-    print(data_ID_type)
-    data_type = bitwise(data_ID_type, ">>", 4)
-    data_ID = bitwise(data_ID_type, '&', b'\x0f')
-    data_sequence = packet[INDEX_SEQUENCE:INDEX_SEQUENCE + LENGTH_SEQUENCE]
-    data_length = packet[INDEX_LENGTH:INDEX_LENGTH + LENGTH_LENGTH]
-    file_data = packet[INDEX_DATA:INDEX_DATA + data_length[0]]
+    data_type = to_int(data_ID_type) >> 4
+    data_ID = to_int(data_ID_type) & 0x0f
+
+    data_sequence = to_int(packet[INDEX_SEQUENCE:INDEX_SEQUENCE +
+                                  LENGTH_SEQUENCE])
+
+    data_length = to_int(packet[INDEX_LENGTH:INDEX_LENGTH + LENGTH_LENGTH])
+
+    file_data = packet[INDEX_DATA:INDEX_DATA + data_length]
+
     data_checksum = packet[INDEX_CHECKSUM:INDEX_CHECKSUM + LENGTH_CHECKSUM]
     data_header = packet[INDEX_TYPE_ID:INDEX_CHECKSUM]
     checksum = generate_checksum(data_header, file_data)
@@ -61,16 +64,3 @@ def parse_packet(packet):
         }
     else:
         return {"type": PacketType.INVALID}
-
-
-def bitwise(input_1, operator, input_2):
-    if operator == '&':
-        return bytes(input_1[0] & input_2[0])
-    elif operator == '|':
-        return bytes(input_1[0] | input_2[0])
-    elif operator == '<<':
-        return bytes(input_1[0] << input_2)
-    elif operator == '>>':
-        return bytes(input_1[0] >> input_2)
-    elif operator == '^':
-        return bytes(input_1[0] ^ input_2[0])
