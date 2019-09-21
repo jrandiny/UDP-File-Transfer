@@ -128,6 +128,7 @@ def receive_thread(addr, input_queue):
     print()
     print("Receiving file from {}".format(addr[0]))
     file_data = bytearray()
+    last_sequence = -1
     iter = 0
     finished = False
     while not finished:
@@ -147,9 +148,11 @@ def receive_thread(addr, input_queue):
 
         send_socket.sendto(feedback_packet, addr)
         # asumsi sequence urut
-        file_data += data
+        if (data_sequence > last_sequence):
+            file_data += data
+            last_sequence = data_sequence
+
         if data_type == PacketType.FIN:
-            # data berakhir
             finished = True
         input_queue.task_done()
 
