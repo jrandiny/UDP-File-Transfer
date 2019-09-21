@@ -149,12 +149,12 @@ def receive_thread(addr, input_queue):
 
         send_socket.sendto(feedback_packet, addr)
         # asumsi sequence urut
-        if (data_sequence > last_sequence):
+        if (data_sequence == last_sequence + 1):
             file_data += data
             last_sequence = data_sequence
 
-        if data_type == PacketType.FIN:
-            finished = True
+            if data_type == PacketType.FIN:
+                finished = True
         input_queue.task_done()
 
     thread_pool_listener[addr[0]][data_id] = None
