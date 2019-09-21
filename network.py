@@ -12,6 +12,11 @@ thread_pool_listener = dict()
 thread_pool_sender = dict()
 
 
+show_progress=False
+file_count=0
+current_progress=0
+total_progress=0
+
 def listener(thread_quit, port):
     '''
     Fungsi utama yang mendengarkan semua pesan masuk
@@ -67,7 +72,6 @@ def listener(thread_quit, port):
 
     listener_socket.close()
 
-
 def send(file, ip_address, port, size):
     '''
     Fungsi utama mengirim file.
@@ -79,6 +83,9 @@ def send(file, ip_address, port, size):
         port (int) : Port tujuan
         size (int) : Ukuran file (untuk menghitung kapan FIN)
     '''
+    global total_progress
+    global file_count
+    global current_progress
 
     # Setup thread pool jika belum ada
     if thread_pool_sender.get(ip_address) == None:
@@ -93,6 +100,8 @@ def send(file, ip_address, port, size):
 
     # Assert : ada thread[thread_id] kosong
     max_number_send = ceil(size / MAX_LENGTH_DATA)
+
+    total_progress += max_number_send
     thread_pool[thread_id] = Queue()
 
     # Setup sender thread
@@ -108,10 +117,12 @@ def send(file, ip_address, port, size):
 
     # Buat paket data
     last_sequence = 0
+                     
     for sequence in range(max_number_send - 1):
         packet = create_packet(file.read(MAX_LENGTH_DATA), thread_id, sequence,
                                PacketType.DATA)
         packet_queue.put(packet)
+
         packet_queue.join()
         last_sequence = sequence + 1
 
@@ -137,6 +148,13 @@ def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
         file_queue (Queue) : Queue berisi paket yang ingin dikirim
         packet_count (int) : Berisi jumlah paket untuk deteksi kapan fin
     '''
+    global current_progress
+
+    print("\nFile sent to {}\n> ".format(addr), end="")
+    file_count -= 1
+    if file_count==0:
+        current_progress=total_progress=0
+
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     finished = False
@@ -168,6 +186,7 @@ def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
                         if (packet_type == PacketType.ACK):
                             ack_received = True
                             index += 1
+                            current_progress += 1
                         elif (packet_type == PacketType.FIN_ACK
                               ) and fin_package:
                             ack_received = True
@@ -177,6 +196,8 @@ def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
             if ack_received:
                 file_queue.task_done()
 
+            if show_progress:
+                printProgress(current_progress,total_progress)
     except socket.gaierror:
         print("Connection error (is destination up?)\n> ", end="")
 
@@ -238,3 +259,10 @@ def receive_thread(addr, input_queue):
     os.rename(file_uuid, "Received_{}_{}".format(addr[0], data_id))
 
     print("File received from {}\n> ".format(addr[0]), end="")
+
+
+def printProgress (current, total, decimals = 2, length = 50, fill = '='):
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (current / float(total)))
+    filledLength = int(length * current // total) - 1
+    bar = fill * filledLength + '>' + '-' * (length - filledLength -1)
+    print('\r%s [%s] %s%%' % ('Sending '+str(file_count)+' file(s)', bar, percent), end = '\r')
