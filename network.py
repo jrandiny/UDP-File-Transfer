@@ -150,6 +150,7 @@ def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
     global current_progress
     global file_count
     global total_progress
+    global show_progress
 
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -203,6 +204,7 @@ def send_thread(packet_id, addr, input_queue, file_queue, packet_count):
     print("\nFile sent to {}\n> ".format(addr), end="")
     if file_count==0:
         current_progress=total_progress=0
+        show_progress = False
 
 
 def receive_thread(addr, input_queue):
