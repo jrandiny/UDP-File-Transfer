@@ -10,7 +10,7 @@ if __name__ == "__main__":
     network_thread.start()
 
     while True:
-        user_input = input("> ")
+        user_input = input("\r> ")
         input_list = user_input.split(" ")
 
         if (input_list[0] == "send"):

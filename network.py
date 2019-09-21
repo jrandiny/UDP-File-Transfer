@@ -126,8 +126,7 @@ def send_thread(packet_id, addr, input_queue: Queue, data):
 
 def receive_thread(addr, input_queue):
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    print()
-    print("Receiving file from {}".format(addr[0]))
+    print("Receiving file from {}\n> ".format(addr[0]), end="")
     file_data = bytearray()
     last_sequence = -1
     iter = 0
@@ -162,4 +161,4 @@ def receive_thread(addr, input_queue):
     with open("received_{}_{}".format(addr[0], data_id), "wb") as binary_file:
         binary_file.write(file_data)
 
-    print("File received from {}".format(addr[0]))
+    print("File received from {}\n> ".format(addr[0]), end="")
