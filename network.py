@@ -1,6 +1,8 @@
 import socket
 import threading
 import time
+import uuid
+import os
 from constant import *
 from queue import Queue
 from util import parse_packet, create_packet
@@ -131,39 +133,44 @@ def send_thread(packet_id, addr, input_queue: Queue, data):
 
 def receive_thread(addr, input_queue):
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
     print("Receiving file from {}\n> ".format(addr[0]), end="")
-    file_data = bytearray()
+
     last_sequence = -1
-    iter = 0
     finished = False
-    while not finished:
-        elm = input_queue.get()
-        data = elm["file_data"]
-        data_id = elm["id"]
-        data_type = PacketType(elm["type"])
-        data_sequence = elm["sequence"]
-        # send feedback
-        if data_type == PacketType.DATA:
-            feedback_packet = create_packet(bytearray(), data_id,
-                                            data_sequence, PacketType.ACK)
-        else:
-            # fin
-            feedback_packet = create_packet(bytearray(), data_id,
-                                            data_sequence, PacketType.FIN_ACK)
 
-        send_socket.sendto(feedback_packet, addr)
-        # asumsi sequence urut
-        if (data_sequence == last_sequence + 1):
-            file_data += data
-            last_sequence = data_sequence
+    file_uuid = uuid.uuid4().hex
 
-            if data_type == PacketType.FIN:
-                finished = True
-        input_queue.task_done()
+    with open(file_uuid, "wb") as binary_file:
+        while not finished:
+            elm = input_queue.get()
+            data = elm["file_data"]
+            data_id = elm["id"]
+            data_type = PacketType(elm["type"])
+            data_sequence = elm["sequence"]
+            # send feedback
+            if data_type == PacketType.DATA:
+                feedback_packet = create_packet(bytearray(), data_id,
+                                                data_sequence, PacketType.ACK)
+            else:
+                # fin
+                feedback_packet = create_packet(bytearray(), data_id,
+                                                data_sequence,
+                                                PacketType.FIN_ACK)
 
-    thread_pool_listener[addr[0]][data_id] = None
-    send_socket.close()
-    with open("received_{}_{}".format(addr[0], data_id), "wb") as binary_file:
-        binary_file.write(file_data)
+            send_socket.sendto(feedback_packet, addr)
+
+            if (data_sequence == last_sequence + 1):
+                binary_file.write(data)
+                last_sequence = data_sequence
+
+                if data_type == PacketType.FIN:
+                    finished = True
+            input_queue.task_done()
+
+        thread_pool_listener[addr[0]][data_id] = None
+        send_socket.close()
+
+    os.rename(file_uuid, "Received_{}_{}".format(addr[0], data_id))
 
     print("File received from {}\n> ".format(addr[0]), end="")
