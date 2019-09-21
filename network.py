@@ -45,7 +45,7 @@ def listener(thread_quit, port):
                         handler = Queue()
                         thread_pool_listener[source_address][data_ID] = handler
                         threading.Thread(target=receive_thread,
-                                         args=(data_ID, (source_address, port),
+                                         args=((source_address, port),
                                                handler)).start()
                         handler.put(packet_data)
                     else:
@@ -132,7 +132,7 @@ def send_thread(packet_id, addr, input_queue: Queue, data):
     send_socket.close()
 
 
-def receive_thread(id, addr, input_queue):
+def receive_thread(addr, input_queue):
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     file_data = bytearray()
     iter = 0
@@ -160,6 +160,8 @@ def receive_thread(id, addr, input_queue):
             finished = True
         input_queue.task_done()
 
-    thread_pool_listener[addr[0]][id] = None
+    thread_pool_listener[addr[0]][data_id] = None
     send_socket.close()
-    print(file_data)
+    with open("received_{}".format(data_id), "wb") as binary_file:
+        binary_file.write(file_data)
+    # print(file_data)
