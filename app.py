@@ -1,5 +1,12 @@
 import threading
+import os
 from network import listener, send
+
+
+def send_worker(file_name, destination, size):
+    with open(input_list[1], "rb") as binary_file:
+        send(binary_file, destination, port, size)
+
 
 if __name__ == "__main__":
     port = int(input("Input listener port : "))
@@ -15,11 +22,12 @@ if __name__ == "__main__":
 
         if (input_list[0] == "send"):
             try:
-                with open(input_list[1], "rb") as binary_file:
-                    send(binary_file.read(), input_list[2], port)
+                file_stat = os.stat(input_list[1])
+                threading.Thread(target=send_worker,
+                                 args=(input_list[1], input_list[2],
+                                       file_stat.st_size)).start()
             except FileNotFoundError:
                 print("File not found")
-
         elif (input_list[0] == "help"):
             print("Avaiable command : ")
             print("-------------------")
