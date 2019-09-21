@@ -96,29 +96,34 @@ def send_thread(packet_id, addr, input_queue: Queue, data):
     finished = False
     index = 0
 
-    while not finished:
-        send_socket.sendto(data[index], addr)
+    try:
+        while not finished:
+            send_socket.sendto(data[index], addr)
 
-        fin_package = False
-        if (index == len(data) - 1):
-            fin_package = True
+            fin_package = False
+            if (index == len(data) - 1):
+                fin_package = True
 
-        start_wait = time.time()
-        ack_received = False
+            start_wait = time.time()
+            ack_received = False
 
-        while (time.time() - start_wait <= MAX_WAIT_ACK) and not ack_received:
-            if (not input_queue.empty()):
-                ack_packet = input_queue.get()
-                if (ack_packet["id"] == packet_id) and (
-                        ack_packet["sequence"] == index):
-                    packet_type = PacketType(ack_packet["type"])
-                    if (packet_type == PacketType.ACK):
-                        ack_received = True
-                        index += 1
-                    elif (packet_type == PacketType.FIN_ACK) and fin_package:
-                        ack_received = True
-                        finished = True
-                input_queue.task_done()
+            while (time.time() - start_wait <=
+                   MAX_WAIT_ACK) and not ack_received:
+                if (not input_queue.empty()):
+                    ack_packet = input_queue.get()
+                    if (ack_packet["id"] == packet_id) and (
+                            ack_packet["sequence"] == index):
+                        packet_type = PacketType(ack_packet["type"])
+                        if (packet_type == PacketType.ACK):
+                            ack_received = True
+                            index += 1
+                        elif (packet_type == PacketType.FIN_ACK
+                              ) and fin_package:
+                            ack_received = True
+                            finished = True
+                    input_queue.task_done()
+    except socket.gaierror:
+        print("Connection error (is destination up?)\n> ", end="")
 
     thread_pool_sender[addr[0]][packet_id] = None
     send_socket.close()
