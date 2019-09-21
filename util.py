@@ -11,6 +11,16 @@ from constant import *
 
 
 def generate_checksum(data_header, file_data):
+    '''
+    Menghasilkan checksum
+
+    Args:
+        data_header (bytearray) : bytearray berisi header paket
+        file_data (bytearray) : bytearray berisi data file yang ada di paket
+    
+    Returns:
+        bytearray: Checksum dari masukkan dalam bentuk bytearray
+    '''
     temp_packet = data_header[:]
     temp_packet += file_data
     checksum = 0
@@ -19,12 +29,25 @@ def generate_checksum(data_header, file_data):
     return checksum.to_bytes(LENGTH_CHECKSUM, byteorder=BYTE_ORDER)
 
 
-def create_packet(file_data, id, sequence, packet_type):
+def create_packet(file_data, packet_id, sequence_id, packet_type):
+    '''
+    Membuat paket data
+
+    Args:
+        file_data (bytearray) : bytearray berisis data yang ingin dibungkus
+        packet_id (int) : ID paket
+        sequence_id (int) : ID sekuens (urutan)
+        packet_type (PacketType) : Tipe paket
+
+    Returns
+        bytearray: Paket data dalam bentuk bytearray
+
+    '''
     packet = bytearray()
 
-    type_id = packet_type.value << 4 | id
+    type_id = packet_type.value << 4 | packet_id
     packet.append(type_id)
-    packet += sequence.to_bytes(LENGTH_LENGTH, byteorder=BYTE_ORDER)
+    packet += sequence_id.to_bytes(LENGTH_LENGTH, byteorder=BYTE_ORDER)
     packet += (len(file_data)).to_bytes(LENGTH_LENGTH, byteorder=BYTE_ORDER)
 
     checksum = generate_checksum(packet, file_data)
@@ -36,10 +59,33 @@ def create_packet(file_data, id, sequence, packet_type):
 
 
 def to_int(byte):
+    '''
+    Mengubah sebuah bytearray menjadi integer
+
+    Args:
+        byte (bytearray) : Input data
+    
+    Returns:
+        int: Representasi integer dari masukkan
+    '''
     return int.from_bytes(byte, byteorder=BYTE_ORDER)
 
 
 def parse_packet(packet):
+    '''
+    Membaca paket menjadi representasi data Python
+
+    Args:
+        packet (bytearray) : Paket dalam bentuk bytearray
+
+    Returns:
+        dict {
+            file_data (bytearray) : File yang dibungkus
+            id (int) : ID dari paket
+            sequence (int) : ID sekuens
+            type (PacketType) : PacketType dari paket
+        }
+    '''
     data_ID_type = packet[INDEX_TYPE_ID:INDEX_TYPE_ID + LENGTH_TYPE_ID]
     data_type = to_int(data_ID_type) >> 4
     data_ID = to_int(data_ID_type) & 0x0f
@@ -60,7 +106,7 @@ def parse_packet(packet):
             "file_data": file_data,
             "id": data_ID,
             "sequence": data_sequence,
-            "type": data_type
+            "type": PacketType(data_type)
         }
     else:
         return {"type": PacketType.INVALID}
