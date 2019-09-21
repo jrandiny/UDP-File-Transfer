@@ -118,11 +118,11 @@ def send_thread(id, addr, input_queue: Queue, data):
                 ack_packet = input_queue.get()
                 if (ack_packet["id"] == id) and (
                         ack_packet["sequence"] == index):
-                    if (ack_packet["type"] == PacketType.ACK):
+                    packet_type = PacketType(ack_packet["type"])
+                    if (packet_type == PacketType.ACK):
                         ack_received = True
                         index += 1
-                    elif (ack_packet["type"] == PacketType.FIN_ACK
-                          ) and fin_package:
+                    elif (packet_type == PacketType.FIN_ACK) and fin_package:
                         ack_received = True
                         finished = True
                 input_queue.task_done()
