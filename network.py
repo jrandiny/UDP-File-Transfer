@@ -101,6 +101,8 @@ def send(file, addr, port, size):
     packet = create_packet(file.read(MAX_LENGTH_DATA), thread_id,
                            last_sequence, PacketType.FIN)
     packet_queue.put(packet)
+    packet_queue.join()
+    print("File sent to {}\n> ".format(addr), end="")
 
 
 def send_thread(packet_id, addr, input_queue, data, packet_count):

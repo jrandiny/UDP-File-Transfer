@@ -26,6 +26,7 @@ if __name__ == "__main__":
                 threading.Thread(target=send_worker,
                                  args=(input_list[1], input_list[2],
                                        file_stat.st_size)).start()
+                print("Sending file to {}".format(input_list[2]))
             except FileNotFoundError:
                 print("File not found")
         elif (input_list[0] == "help"):
