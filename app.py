@@ -3,11 +3,9 @@ import os
 import network
 
 
-
-
 def send_worker(file_name, destination, size):
     with open(input_list[1], "rb") as binary_file:
-        network.send(binary_file, destination, port, size)
+        network.send(binary_file, destination, port, size, file_name)
 
 
 if __name__ == "__main__":
@@ -40,15 +38,15 @@ if __name__ == "__main__":
             print("show -- to show progress bar")
             print("<enter> -- to hide progress bar")
         elif (input_list[0] == "show"):
-            if network.file_count>0:
-                network.show_progress=True 
+            if network.file_count > 0:
+                network.show_progress = True
             else:
                 print("No file transfer happening")
 
         elif (input_list[0] == "quit"):
             break
-        elif len(user_input)==0:
-            network.show_progress=False
+        elif len(user_input) == 0:
+            network.show_progress = False
         else:
             print("Invalid input")
 
